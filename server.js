@@ -1,12 +1,10 @@
 const port = 3000;
-
 const mysql = require("mysql2");
 const express = require("express");
 const app = express();
 const cors = require("cors");
 app.use(express.json());
 app.use(cors());
-
 
 const db = mysql.createConnection({
   host: "localhost",
@@ -214,48 +212,19 @@ app.post("/placeorder", (req, res) => {
         console.log("ORDER ERROR =", err);
         return res.status(500).json({
           message: "Error placing order",
-          error: err.message
+          error: err.message,
+          code: err.code
         });
       }
 
-      const orderId = result.insertId;
-      let completed = 0;
-
-      cart.forEach((item) => {
-        const productId = Number(item.id);
-        const quantity = Number(item.quantity);
-        const linePrice = Number(item.prix) * quantity;
-
-        console.log("ITEM =", item);
-
-        db.query(
-          "INSERT INTO order_line (id_order, id_product, quantity, price) VALUES (?, ?, ?, ?)",
-          [orderId, productId, quantity, linePrice],
-          (err2) => {
-            if (err2) {
-              console.log("ORDER LINE ERROR =", err2);
-              return res.status(500).json({
-                message: "Error inserting order line",
-                error: err2.message
-              });
-            }
-
-            completed++;
-
-            if (completed === cart.length) {
-              return res.status(201).json({
-                message: "Order placed successfully",
-                orderId: orderId,
-                total: total
-              });
-            }
-          }
-        );
+      return res.status(201).json({
+        message: "Order placed successfully",
+        orderId: result.insertId,
+        total: total
       });
     }
   );
 });
-
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
