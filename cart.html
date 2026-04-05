@@ -255,7 +255,10 @@
     <nav class="navbar navbar-expand-lg topbar py-3">
       <div class="container-fluid px-4">
         <a class="brand me-4" href="home.html">Amazing Zone</a>
-        <p v-if="Connected === 'true'">hello {{ name }} {{ familyName }}</p>
+
+        <p v-if="Connected" class="text-white mb-0 me-3">
+          hello {{ name }} {{ familyName }}
+        </p>
 
         <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
           <span class="navbar-toggler-icon"></span>
@@ -277,7 +280,7 @@
           <div class="d-flex align-items-center gap-4">
             <a v-if="!Connected" href="login.html" class="header-link"><i class="bi bi-person-circle me-1"></i> Login</a>
             <a v-if="Connected" href="profile.html" class="header-link"><i class="bi bi-person-circle me-1"></i> Profile</a>
-            <a v-if="Connected" class="header-link" @click="logout">
+            <a v-if="Connected" href="#" class="header-link" @click.prevent="logout">
               <i class="bi bi-box-arrow-right me-1"></i> Logout
             </a>
             <a href="cart.html" class="header-link"><i class="bi bi-cart3 me-1"></i> Cart ({{ totalItems }})</a>
@@ -293,51 +296,51 @@
             <div class="cart-header d-flex justify-content-between align-items-end">
               <div>
                 <div class="cart-title">Your cart</div>
-                <a href="#" class="cart-sub-link" @click.prevent="clearCart" v-if="cart.length > 0">
+                <a href="#" class="cart-sub-link" @click.prevent="clearCart" v-if="cart.length > 0 && !invoice">
                   Deselect all items
                 </a>
               </div>
-              <div class="price-header">Price</div>
+              <div class="price-header" v-if="cart.length > 0 && !invoice">Price</div>
             </div>
 
             <div v-if="cart.length === 0 && !invoice" class="empty-cart">
-  <i class="bi bi-cart-x"></i>
-  <h3>Your cart is empty</h3>
-  <a href="home.html" class="btn btn-warning continue-btn">Continue Shopping</a>
-</div>
-<div v-if="invoice" class="cart-box p-4">
+              <i class="bi bi-cart-x"></i>
+              <h3>Your cart is empty</h3>
+              <a href="home.html" class="btn btn-warning continue-btn">Continue Shopping</a>
+            </div>
 
-  <h2 class="mb-3">🧾 Invoice</h2>
+            <div v-if="invoice" class="cart-box p-4">
+              <h2 class="mb-3">🧾 Invoice</h2>
 
-  <p><strong>Order ID:</strong> {{ invoice.orderId }}</p>
-  <p><strong>Date:</strong> {{ new Date().toLocaleString() }}</p>
+              <p><strong>Order ID:</strong> {{ invoice.orderId }}</p>
+              <p><strong>Date:</strong> {{ invoice.date }}</p>
 
-  <hr>
+              <hr>
 
-  <div v-for="item in invoice.items" :key="item.id" class="d-flex justify-content-between mb-2">
-    <div>
-      {{ item.nom }} (x{{ item.quantity }})
-    </div>
-    <div>
-      {{ formatPrice(item.prix * item.quantity) }}
-    </div>
-  </div>
+              <div v-for="item in invoice.items" :key="item.id" class="d-flex justify-content-between mb-2">
+                <div>
+                  {{ item.nom }} (x{{ item.quantity }})
+                </div>
+                <div>
+                  {{ formatPrice(item.prix * item.quantity) }}
+                </div>
+              </div>
 
-  <hr>
+              <hr>
 
-  <h4 class="text-end">
-    Total: {{ formatPrice(invoice.total) }}
-  </h4>
+              <h4 class="text-end">
+                Total: {{ formatPrice(invoice.total) }}
+              </h4>
 
-  <button class="btn btn-warning mt-3" @click="invoice = null">
-    Continue Shopping
-  </button>
+              <a href="home.html" class="btn btn-warning mt-3">
+                Continue Shopping
+              </a>
+            </div>
 
-</div>
-            <div v-for="(item, index) in cart" :key="item.id" class="cart-item">
+            <div v-if="!invoice" v-for="(item, index) in cart" :key="item.id" class="cart-item">
               <div class="row align-items-start">
                 <div class="col-md-2 text-center mb-3 mb-md-0">
-                  <img :src="https://amazingzone.onrender.com/images/' + item.image" class="cart-img">
+                  <img :src="'https://amazingzone.onrender.com/images/' + item.image" class="cart-img" :alt="item.nom">
                 </div>
 
                 <div class="col-md-8">
@@ -363,7 +366,7 @@
           </div>
         </div>
 
-        <div class="col-lg-3">
+        <div class="col-lg-3" v-if="cart.length > 0 && !invoice">
           <div class="summary-box">
             <div class="summary-title">Subtotal</div>
             <div class="summary-subtotal">
@@ -385,17 +388,18 @@
       el: "#app",
 
       data() {
-  return {
-    search: "",
-    Connected: localStorage.getItem("Connected") || "false",
-    name: localStorage.getItem("name") || "",
-    familyName: localStorage.getItem("familyName") || "",
-    idclient: localStorage.getItem("userId") || null,
-    cart: JSON.parse(localStorage.getItem("cart")) || [],
-    invoice: null
-  };
-}
-  ,
+        return {
+          search: "",
+          Connected: localStorage.getItem("connected") === "true",
+          name: localStorage.getItem("name") || "",
+          familyName: localStorage.getItem("familyName") || "",
+          idclient: localStorage.getItem("userId") || null,
+          cart: JSON.parse(localStorage.getItem("cart")) || [],
+          invoice: null,
+          apiBase: "https://amazingzone.onrender.com"
+        };
+      },
+
       computed: {
         totalItems() {
           return this.cart.reduce((total, item) => total + Number(item.quantity), 0);
@@ -436,7 +440,6 @@
         clearCart() {
           this.cart = [];
           this.saveCart();
-          localStorage.removeItem("totalitems");
         },
 
         saveCart() {
@@ -447,42 +450,53 @@
           this.cart = JSON.parse(localStorage.getItem("cart")) || [];
         },
 
-       checkout() {
-  fetch("http://localhost:3000/placeorder", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      idclient: this.idclient,
-      cart: this.cart
-    })
-  })
-  .then(async res => {
-    const data = await res.json();
-    console.log("STATUS =", res.status);
-    console.log("DATA =", data);
+        checkout() {
+          if (!this.idclient) {
+            alert("Please log in first.");
+            window.location.href = "login.html";
+            return;
+          }
 
-    if (!res.ok) {
-      throw new Error(data.error || data.message);
-    }
+          if (this.cart.length === 0) {
+            alert("Your cart is empty.");
+            return;
+          }
 
-    this.invoice = {
-  orderId: data.orderId,
-  total: data.total,
-  items: [...this.cart]
-};
+          fetch(this.apiBase + "/placeorder", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              idclient: this.idclient,
+              cart: this.cart
+            })
+          })
+          .then(async (res) => {
+            const data = await res.json();
 
-this.clearCart();
-  })
-  .catch(err => {
-    console.log("FETCH ERROR =", err);
-    alert(err.message);
-  });
-},
+            if (!res.ok) {
+              throw new Error(data.error || data.message || "Checkout failed");
+            }
+
+            this.invoice = {
+              orderId: data.orderId,
+              total: data.total,
+              items: [...this.cart],
+              date: new Date().toLocaleString()
+            };
+
+            this.clearCart();
+          })
+          .catch((err) => {
+            console.log("FETCH ERROR =", err);
+            alert(err.message);
+          });
+        },
+
         logout() {
           localStorage.removeItem("userId");
-          localStorage.removeItem("Connected");
+          localStorage.removeItem("connected");
           localStorage.removeItem("name");
           localStorage.removeItem("familyName");
           window.location.href = "login.html";
@@ -491,9 +505,6 @@ this.clearCart();
 
       mounted() {
         this.loadCart();
-        console.log(this.idclient);
-        console.log(this.cart);
-        console.log(this.cart);
       }
     });
   </script>
