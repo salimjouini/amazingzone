@@ -1,27 +1,34 @@
-const port = 3000;
 const mysql = require("mysql2");
 const express = require("express");
-const app = express();
 const cors = require("cors");
+
+const app = express();
+const port = process.env.PORT || 3000;
+
 app.use(express.json());
 app.use(cors());
 
+// Railway DB connection
 const db = mysql.createConnection({
-  host: "localhost",
+  host: "junction.proxy.rlwy.net",
+  port: 35042,
   user: "root",
-  password: "admin",
-  database: "prj_DB"
+  password: "UYltdNQSiuBdWObFtfXrXeUFcUGZXxKB",
+  database: "railway"
 });
 
 db.connect((err) => {
   if (err) {
     console.log("❌ Error connecting to DB:", err);
   } else {
-    console.log("✅ Connected to MySQL");
+    console.log("✅ Connected to Railway MySQL");
   }
 });
 
 // serve images
+app.use("/images", express.static("public/images"));
+
+// serve other static files
 app.use(express.static("public"));
 
 // GET clients
