@@ -377,7 +377,7 @@
           return;
         }
 
-        fetch(`http://localhost:3000/products/${productId}`)
+        fetch(`https://amazingzone.onrender.com/products/${productId}`)
           .then(res => {
             if (!res.ok) {
               throw new Error("Product not found");
